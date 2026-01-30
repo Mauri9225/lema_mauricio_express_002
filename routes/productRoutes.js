@@ -3,14 +3,21 @@ const express = require('express')
 const router = express.Router()
 
 const productService = require('../services/productService')
-router.get('/', (req, res) => {
-    const result = productService.findAll()
+router.get('/', async (req, res) => {
+    const result = await productService.findAll()
     res.json(result)
 })
 
-router.get('/:id', (req, res) => {
-    const result = productService.searchById(req.params.id)
-    res.json(result)
+// ID
+router.get('/:id', async (req, res) => {
+    try {
+        const result = await productService.findById(req.params.id)
+        res.json(result)
+    } catch (error) {
+        res.status(error.status || 500).json({
+            message: error.message || 'Internal server error'
+        })
+    }
 })
 
 //get --> lectura
@@ -18,41 +25,61 @@ router.get('/:id', (req, res) => {
 //put --> edicion 
 //delete --> eliminacion
 
-router.post('/', (req, res) => {
-    const {name, price }= req.body
+//obtener productos por rango de existencia
+router.get('/existence/:min/:max', async (req, res) => {
+    const min = req.params.min
+    const max = req.params.max
 
-    if (!name || !price) {
-        return res.status(400).json({
-            message: 'name and price are required'
-        })
-    }
-    const newProduct = productService.create({
-        name, price}) 
-        res.status(201).json(newProduct)
+    const products = await productService.findProductBetweenExistence(min, max)
+    res.json(products)
 })
 
-router.put('/:id', (req, res) => {
+router.post('/', async (req, res) => {
+    const {description, price, stock, sku }= req.body
+
+    if (!description || !price || !stock || !sku) {
+        return res.status(400).json({
+            message: 'description, price, stock and sku are required'
+        })
+    }
+    try {
+        const newProduct = await productService.create({
+            description, price, stock, sku})
+            res.status(201).json(newProduct)
+    } catch (error) {
+        res.status(error.status || 500).json({
+            message: error.message || 'Internal server error'
+        })
+    }
+})
+
+//editar
+router.put('/:id', async (req, res) => {
     const id = Number(req.params.id)
-    const updatedProduct = productService.update(id, req.body)
-    
-    if (!updatedProduct) {
-        return res.status(404).json({
-            message: `product with id ${id} not found`
+    try {
+        const updatedProduct = await productService.update(id, req.body)
+    } catch (error) {
+        res.status(error.status || 500).json({
+            message: error.message || 'Internal server error'
         })
     }
     res.json(updatedProduct)
 })
 
-router.delete('/:id', (req, res) => {
+//eliminar
+router.delete('/:id', async (req, res) => {
     const id = Number(req.params.id)
-    const deletedProduct = productService.delete(id)
-    
-    if (!deletedProduct) {
-        return res.status(404).json({
-            message: `product with id ${id} not found`
+    try {
+        const id = Number(req.params.id)
+        const deletedProduct = await productService.delete(id)
+        res.json(deletedProduct)
+
+    } catch (error) {
+        res.status(error.status || 500).json({
+            message: error.message || 'Internal server error'
         })
     }
-    res.json(deletedProduct)
+    
 })
 
 module.exports = router

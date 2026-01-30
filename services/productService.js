@@ -1,13 +1,14 @@
-const productRepository = require("../repositories/productRepository")
+const productRepository = require("../repositories/productRepositorySQL")
 class ProductService {
-    findAll() {
-        const products = productRepository.findAll()
+    async findAll() {
+        const products = await productRepository.findAll()
         return {
             products,
             total: products.length
         }
     }
-    searchById(id) {
+
+    async findById(id) {
         const numericID = parseInt(id)
 
         // http status:
@@ -25,7 +26,7 @@ class ProductService {
             }
 
         }
-        const product = productRepository.findById(numericID)
+        const product = await productRepository.findById(numericID)
 
         if (!product) {
             throw {
@@ -37,7 +38,7 @@ class ProductService {
     }
 
     // Create 
-    create (newProduct) {
+    async create (newProduct) {
         const oldWaydescription = newProduct.description
         if (!oldWaydescription) {
             throw {
@@ -60,14 +61,15 @@ class ProductService {
         }
     
     //asi para cada uno de los campos
-        const existingSku= productRepository.findBySku(sku)
+        const existingSku = await productRepository.findBySku(sku)
         if (existingSku) {
             throw {
                 status:400,
                 message: 'sku must be unique'
             }
         }
-        const savedProduct = productRepository.create({
+        
+        const savedProduct = await productRepository.create({
             description: description.trim(),
             price,
             stock,
@@ -77,7 +79,7 @@ class ProductService {
     }
 
     //update
-    update(id, updateProduct) {
+    async update(id, updateProduct) {
         const numericID = parseInt(id)
 
         if (isNaN(numericID)) {
@@ -86,7 +88,7 @@ class ProductService {
                 message: 'id must be a number'
             }
         }
-        const updatedProduct = productRepository.update(numericID, updateProduct)
+        const updatedProduct = await productRepository.update(numericID, updateProduct)
         if (!updatedProduct) {
             throw {
                 status: 404,
@@ -97,7 +99,7 @@ class ProductService {
     }
 
     //delete
-    delete(id) {
+    async delete(id) {
         const numericID = parseInt(id)
 
         if (isNaN(numericID)) {
@@ -106,7 +108,8 @@ class ProductService {
                 message: 'id must be a number'
             }
         }
-        const deletedProduct = productRepository.delete(numericID)
+
+        const deletedProduct = await productRepository.delete(numericID)
         if (!deletedProduct) {
             throw {
                 status: 404,
@@ -115,6 +118,33 @@ class ProductService {
         }
         return deletedProduct
     }
+    async findProductBetweenExistence(min, max) {
+    const minStock = parseInt(min)
+    const maxStock = parseInt(max)
+
+    if (isNaN(minStock) || isNaN(maxStock)) {
+        throw {
+            status: 400,
+            message: 'min and max must be numbers'
+        }
+    }
+
+    if (minStock > maxStock) {
+        throw {
+            status: 400,
+            message: 'min stock cannot be greater than max stock'
+        }
+    }
+
+    const products = await productRepository
+        .findProductBetweenExistence(minStock, maxStock)
+
+    return {
+        products,
+        total: products.length
+    }
+}
+
 }
 
 module.exports = new ProductService()
